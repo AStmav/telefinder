@@ -1,50 +1,175 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+Sync Impact Report:
+Version: 0.0.0 → 1.0.0
+Change Type: MAJOR - Initial constitution ratification
+Modified Principles: N/A (initial creation)
+Added Sections:
+  - Core Principles (5 principles)
+  - Technology Stack
+  - Development Workflow
+  - Governance
+Templates Status:
+  ✅ plan-template.md - reviewed, no updates needed (uses generic constitution check)
+  ✅ spec-template.md - reviewed, no updates needed (technology-agnostic)
+  ✅ tasks-template.md - reviewed, compatible with commit-per-task principle
+Follow-up TODOs: None
+-->
+
+# TeleFinder Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Technology Stack (NON-NEGOTIABLE)
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+The project MUST use the following technology stack:
+- **Backend**: Python FastAPI for API development
+- **Frontend**: Vue.js with TypeScript for type safety
+- **Styling**: Tailwind CSS for UI components
+- **Integration**: Telegram Bot API for publication and bot functionality
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+**Rationale**: This stack ensures modern development practices, type safety, rapid UI development, and seamless Telegram integration. Any deviation requires constitutional amendment.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### II. Telegram Bot API Integration
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+All publication and communication features MUST use the official Telegram Bot API.
+- Bot functionality must be modular and testable
+- API interactions must be properly abstracted
+- Error handling for Telegram API failures is mandatory
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+**Rationale**: Telegram is the core publishing platform; proper API integration ensures reliability and maintainability.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### III. Markdown Processing & Validation (NON-NEGOTIABLE)
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+The system MUST include a Markdown converter with syntax validation:
+- Markdown input must be validated before processing
+- Conversion errors must be caught and reported clearly
+- Support for standard Markdown and relevant extensions
+- Output must be properly formatted for target platform
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+**Rationale**: Markdown is likely the primary content format; validation prevents errors and ensures consistent output quality.
+
+### IV. Environment-Based Configuration (NON-NEGOTIABLE)
+
+All tokens, secrets, and sensitive configuration MUST be stored in environment variables:
+- NO hardcoded credentials in source code
+- `.env.example` file must document all required variables
+- Application must fail fast on missing required environment variables
+- Separate configurations for development, testing, and production
+
+**Rationale**: Security best practice to prevent credential leaks and enable environment-specific configuration without code changes.
+
+### V. Atomic Git Commits (NON-NEGOTIABLE)
+
+One task equals one commit:
+- Each task from tasks.md results in exactly one commit
+- Commit message must reference the task ID (e.g., "T001: Create project structure")
+- Commits must be atomic and self-contained
+- No partial work or multi-task commits allowed
+
+**Rationale**: Ensures clean git history, easy rollback, clear traceability between tasks and code changes, and simplified code review process.
+
+## Technology Stack
+
+**Backend**:
+- Language: Python 3.10+
+- Framework: FastAPI
+- Package Management: pip with requirements.txt (or Poetry if preferred)
+- API Documentation: Auto-generated via FastAPI/OpenAPI
+
+**Frontend**:
+- Framework: Vue.js 3
+- Language: TypeScript (strict mode)
+- Styling: Tailwind CSS
+- Build Tool: Vite (recommended for Vue 3 + TypeScript)
+
+**Integration**:
+- Telegram Bot API (official Python library: python-telegram-bot or aiogram)
+
+**Configuration**:
+- Environment variables via python-dotenv
+- .env files for local development (gitignored)
+- .env.example committed to repository
+
+## Development Workflow
+
+### Task-Driven Development
+
+1. Tasks are defined in `/specs/[###-feature-name]/tasks.md`
+2. Each task is implemented completely
+3. Upon task completion, create ONE commit with format: `T###: [task description]`
+4. Task commits must be atomic - no mixing of multiple tasks
+5. All tests (if any) related to the task must pass before commit
+
+### Code Organization
+
+**Repository Structure** (Web Application):
+
+```
+backend/
+├── src/
+│   ├── api/          # FastAPI routes
+│   ├── models/       # Data models
+│   ├── services/     # Business logic
+│   ├── telegram/     # Telegram Bot API integration
+│   ├── markdown/     # Markdown converter & validator
+│   └── config/       # Configuration management
+├── tests/
+└── requirements.txt
+
+frontend/
+├── src/
+│   ├── components/   # Vue components
+│   ├── pages/        # Vue pages/views
+│   ├── services/     # API clients
+│   ├── types/        # TypeScript type definitions
+│   └── assets/       # Static assets
+├── tests/
+└── package.json
+
+.env.example          # Template for environment variables
+.gitignore            # Must include .env
+```
+
+### Security Requirements
+
+- All environment variables must be documented in `.env.example`
+- Never commit actual `.env` files
+- Validate all environment variables on application startup
+- Use TypeScript strict mode to catch type errors early
+- Validate and sanitize all user inputs (Markdown, API requests)
+
+### Quality Standards
+
+- Python code must follow PEP 8 guidelines
+- TypeScript code must pass strict type checking
+- Markdown validation must catch syntax errors before publishing
+- Telegram API calls must include proper error handling
+- One commit per task (referenced by task ID)
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+### Amendment Process
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+1. Constitutional changes require documentation of rationale
+2. Version must be incremented according to semantic versioning:
+   - **MAJOR**: Breaking changes to principles, tech stack, or workflow
+   - **MINOR**: New principles or sections added
+   - **PATCH**: Clarifications, typo fixes, non-semantic changes
+3. All affected templates and documentation must be updated
+4. Team review required for MAJOR changes
+
+### Compliance
+
+- All pull requests must verify compliance with this constitution
+- Non-negotiable principles (I, III, IV, V) cannot be violated
+- Tech stack principle (I) can only change via constitutional amendment
+- Code reviews must check: environment variables usage, commit atomicity, Markdown validation, TypeScript strictness
+
+### Version Control
+
+- Git history must be clean and atomic (one task = one commit)
+- Branch naming: `###-feature-name` (based on task tracking)
+- Commit message format: `T###: [description]` for task commits
+- No force pushes to main/master branch without team consensus
+
+**Version**: 1.0.0 | **Ratified**: 2026-02-09 | **Last Amended**: 2026-02-09

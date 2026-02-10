@@ -1,0 +1,876 @@
+openapi: 3.1.0
+info:
+  title: TeleFinder API
+  description: |
+    RESTful API for TeleFinder - Personal Telegram Content Aggregator
+    
+    ## Authentication
+    Most endpoints require JWT authentication via Bearer token in Authorization header.
+    
+    ## Rate Limiting
+    - Authentication endpoints: 10 requests/minute per IP
+    - Standard endpoints: 100 requests/minute per user
+    - WebSocket connections: 5 concurrent connections per user
+  version: 1.0.0
+  contact:
+    name: TeleFinder Development Team
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Local development server
+  - url: https://api.telefinder.app/api/v1
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User authentication and session management
+  - name: Groups
+    description: Telegram group management
+  - name: Filters
+    description: Filter creation and management
+  - name: Feed
+    description: Message feed and hot matches
+  - name: Notifications
+    description: Notification management
+  - name: User
+    description: User profile and preferences
+
+security:
+  - BearerAuth: []
+
+paths:
+  # Authentication Endpoints
+  /auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register new user
+      description: Create a new TeleFinder account with email and password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: SecurePass123!
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: User login
+      description: Authenticate with email and password, receive JWT token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                  token_type:
+                    type: string
+                    example: bearer
+                  user:
+                    $ref: '#/components/schemas/UserResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/telegram/init:
+    post:
+      tags: [Authentication]
+      summary: Initialize Telegram authentication
+      description: Start MTProto authentication flow, send verification code to phone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone_number]
+              properties:
+                phone_number:
+                  type: string
+                  example: "+1234567890"
+      responses:
+        '200':
+          description: Verification code sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  phone_code_hash:
+                    type: string
+                    description: Hash to verify code in next step
+                  message:
+                    type: string
+                    example: Verification code sent to your Telegram app
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /auth/telegram/verify:
+    post:
+      tags: [Authentication]
+      summary: Verify Telegram authentication code
+      description: Complete MTProto authentication with verification code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone_number, phone_code, phone_code_hash]
+              properties:
+                phone_number:
+                  type: string
+                phone_code:
+                  type: string
+                  example: "12345"
+                phone_code_hash:
+                  type: string
+                two_factor_password:
+                  type: string
+                  description: Required only if 2FA enabled on Telegram account
+      responses:
+        '200':
+          description: Telegram authentication successful
+          content:
+            application/json:
+              schema:
+                type: object:
+                properties:
+                  telegram_user_id:
+                    type: integer
+                    format: int64
+                  telegram_username:
+                    type: string
+                  message:
+                    type: string
+                    example: Telegram account linked successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # Group Management Endpoints
+  /groups:
+    get:
+      tags: [Groups]
+      summary: List user's monitored groups
+      description: Get all Telegram groups user is monitoring
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, unavailable, error, disabled]
+          description: Filter by group status
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of groups
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  groups:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TelegramGroup'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Groups]
+      summary: Add new group to monitor
+      description: Add a Telegram group by username or invite link
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [identifier]
+              properties:
+                identifier:
+                  type: string
+                  description: Group username (@python_jobs) or invite link
+                  example: "@python_jobs"
+      responses:
+        '201':
+          description: Group added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelegramGroup'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Group not found or user not a member
+
+  /groups/{group_id}:
+    get:
+      tags: [Groups]
+      summary: Get group details
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+      responses:
+        '200':
+          description: Group details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelegramGroup'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Groups]
+      summary: Update group settings
+      description: Enable/disable monitoring, update settings
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                is_active:
+                  type: boolean
+      responses:
+        '200':
+          description: Group updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelegramGroup'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Groups]
+      summary: Remove group from monitoring
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+      responses:
+        '204':
+          description: Group removed successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # Filter Management Endpoints
+  /filters:
+    get:
+      tags: [Filters]
+      summary: List user's filters
+      parameters:
+        - name: is_active
+          in: query
+          schema:
+            type: boolean
+          description: Filter by active status
+      responses:
+        '200':
+          description: List of filters
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Filter'
+
+    post:
+      tags: [Filters]
+      summary: Create new filter
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FilterCreate'
+      responses:
+        '201':
+          description: Filter created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Filter'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /filters/{filter_id}:
+    get:
+      tags: [Filters]
+      summary: Get filter details
+      parameters:
+        - $ref: '#/components/parameters/FilterId'
+      responses:
+        '200':
+          description: Filter details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Filter'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Filters]
+      summary: Update filter
+      parameters:
+        - $ref: '#/components/parameters/FilterId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FilterCreate'
+      responses:
+        '200':
+          description: Filter updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Filter'
+
+    delete:
+      tags: [Filters]
+      summary: Delete filter
+      parameters:
+        - $ref: '#/components/parameters/FilterId'
+      responses:
+        '204':
+          description: Filter deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # Feed Endpoints
+  /feed:
+    get:
+      tags: [Feed]
+      summary: Get message feed
+      description: Retrieve filtered messages for user
+      parameters:
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [timestamp, relevance]
+            default: timestamp
+        - name: filter_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by specific filter
+        - name: group_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by specific group
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 200
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: since
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Only messages after this timestamp
+      responses:
+        '200':
+          description: Feed messages
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/FeedMessage'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+
+  /feed/hot-matches:
+    get:
+      tags: [Feed]
+      summary: Get hot matches
+      description: Retrieve high-priority filtered messages
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: unread_only
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Hot match messages
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/FeedMessage'
+                  total:
+                    type: integer
+
+  # Notification Endpoints
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: Get notification history
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, sent, failed, read]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Notification list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+
+  /notifications/{notification_id}/read:
+    post:
+      tags: [Notifications]
+      summary: Mark notification as read
+      parameters:
+        - name: notification_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Notification marked as read
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # User Profile Endpoints
+  /user/profile:
+    get:
+      tags: [User]
+      summary: Get user profile
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+
+    patch:
+      tags: [User]
+      summary: Update user profile
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notification_preferences:
+                  type: object
+                  properties:
+                    telegram_enabled:
+                      type: boolean
+                    web_push_enabled:
+                      type: boolean
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+
+  /user/stats:
+    get:
+      tags: [User]
+      summary: Get user statistics
+      description: Overall statistics about groups, filters, messages
+      responses:
+        '200':
+          description: User statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_groups:
+                    type: integer
+                  active_groups:
+                    type: integer
+                  total_filters:
+                    type: integer
+                  total_messages:
+                    type: integer
+                  hot_matches_today:
+                    type: integer
+                  messages_today:
+                    type: integer
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    GroupId:
+      name: group_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    FilterId:
+      name: filter_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        telegram_user_id:
+          type: integer
+          format: int64
+          nullable: true
+        is_active:
+          type: boolean
+        notification_preferences:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+
+    TelegramGroup:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        telegram_group_id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        username:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+        status:
+          type: string
+          enum: [active, unavailable, error, disabled]
+        last_message_at:
+          type: string
+          format: date-time
+          nullable: true
+        message_count:
+          type: integer
+        match_count:
+          type: integer
+        added_at:
+          type: string
+          format: date-time
+
+    Filter:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        keywords:
+          type: array
+          items:
+            type: string
+        negative_keywords:
+          type: array
+          items:
+            type: string
+        semantic_enabled:
+          type: boolean
+        semantic_threshold:
+          type: number
+          format: float
+          minimum: 0.5
+          maximum: 0.9
+        priority:
+          type: integer
+          minimum: 0
+          maximum: 10
+        is_active:
+          type: boolean
+        notification_enabled:
+          type: boolean
+        notification_frequency:
+          type: string
+          enum: [instant, hourly, daily, none]
+        match_count:
+          type: integer
+        last_match_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    FilterCreate:
+      type: object
+      required: [name, keywords]
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        keywords:
+          type: array
+          items:
+            type: string
+          minItems: 1
+        negative_keywords:
+          type: array
+          items:
+            type: string
+        semantic_enabled:
+          type: boolean
+          default: false
+        semantic_threshold:
+          type: number
+          format: float
+          default: 0.65
+        priority:
+          type: integer
+          default: 0
+        notification_enabled:
+          type: boolean
+          default: false
+        notification_frequency:
+          type: string
+          enum: [instant, hourly, daily, none]
+          default: instant
+
+    FeedMessage:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        group:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            title:
+              type: string
+        text:
+          type: string
+        author_name:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        telegram_link:
+          type: string
+          format: uri
+        has_media:
+          type: boolean
+        media_type:
+          type: string
+          nullable: true
+        matches:
+          type: array
+          items:
+            type: object
+            properties:
+              filter_id:
+                type: string
+                format: uuid
+              filter_name:
+                type: string
+              relevance_score:
+                type: number
+                format: float
+              matched_keywords:
+                type: array
+                items:
+                  type: string
+              is_hot_match:
+                type: boolean
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [hot_match, system, group_unavailable]
+        channel:
+          type: string
+          enum: [telegram_bot, web_push, email]
+        status:
+          type: string
+          enum: [pending, sent, failed, read]
+        title:
+          type: string
+        body:
+          type: string
+        telegram_link:
+          type: string
+          format: uri
+        sent_at:
+          type: string
+          format: date-time
+          nullable: true
+        read_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        detail:
+          type: string
+        code:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: Unauthorized - invalid or missing token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
