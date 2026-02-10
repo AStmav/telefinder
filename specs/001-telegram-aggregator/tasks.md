@@ -45,8 +45,8 @@
 ### Database & Configuration
 
 - [x] T010 Create config/settings.py with Pydantic Settings for environment variable loading (SQLITE_DB_PATH, TELEGRAM_API_ID, etc.)
-- [ ] T011 Create config/database.py with SQLAlchemy engine for SQLite (create_engine with sqlite:/// URL)
-- [ ] T012 Create database session management in config/database.py (SessionLocal, get_db dependency)
+- [x] T011 Create config/database.py with SQLAlchemy engine for SQLite (create_engine with sqlite:/// URL)
+- [x] T012 Create database session management in config/database.py (SessionLocal, get_db dependency)
 - [ ] T013 [P] Initialize Alembic for database migrations in backend/alembic/ (alembic init)
 - [ ] T014 Configure Alembic env.py to use SQLAlchemy models and SQLite database URL
 
