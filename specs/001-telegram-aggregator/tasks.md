@@ -24,15 +24,15 @@
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Create backend directory structure per plan.md (backend/src/{api,models,services,telegram,config,schemas})
-- [ ] T002 Create frontend directory structure per plan.md (frontend/src/{components,pages,services,stores,types,composables,router,assets})
-- [ ] T003 [P] Initialize Python project in backend/requirements.txt with FastAPI, SQLAlchemy, python-telegram-bot, sentence-transformers
-- [ ] T004 [P] Initialize Node.js project in frontend/package.json with Vue 3, TypeScript, Vite, Tailwind CSS, Pinia
-- [ ] T005 [P] Create .gitignore at repository root (Python, Node.js, SQLite DB file patterns)
-- [ ] T006 [P] Create .env.example at repository root with all required environment variables (SQLite path, Telegram credentials)
-- [ ] T007 [P] Create README.md at repository root with project overview and setup instructions
-- [ ] T008 [P] Create backend/README.md with backend-specific setup instructions
-- [ ] T009 [P] Create frontend/README.md with frontend-specific setup instructions
+- [x] T001 Create backend directory structure per plan.md (backend/src/{api,models,services,telegram,config,schemas})
+- [x] T002 Create frontend directory structure per plan.md (frontend/src/{components,pages,services,stores,types,composables,router,assets})
+- [x] T003 [P] Initialize Python project in backend/requirements.txt with FastAPI, SQLAlchemy, python-telegram-bot, sentence-transformers
+- [x] T004 [P] Initialize Node.js project in frontend/package.json with Vue 3, TypeScript, Vite, Tailwind CSS, Pinia
+- [x] T005 [P] Create .gitignore at repository root (Python, Node.js, SQLite DB file patterns)
+- [x] T006 [P] Create .env.example at repository root with all required environment variables (SQLite path, Telegram credentials)
+- [x] T007 [P] Create README.md at repository root with project overview and setup instructions
+- [x] T008 [P] Create backend/README.md with backend-specific setup instructions
+- [x] T009 [P] Create frontend/README.md with frontend-specific setup instructions
 
 ---
 
@@ -44,7 +44,7 @@
 
 ### Database & Configuration
 
-- [ ] T010 Create config/settings.py with Pydantic Settings for environment variable loading (SQLITE_DB_PATH, TELEGRAM_API_ID, etc.)
+- [x] T010 Create config/settings.py with Pydantic Settings for environment variable loading (SQLITE_DB_PATH, TELEGRAM_API_ID, etc.)
 - [ ] T011 Create config/database.py with SQLAlchemy engine for SQLite (create_engine with sqlite:/// URL)
 - [ ] T012 Create database session management in config/database.py (SessionLocal, get_db dependency)
 - [ ] T013 [P] Initialize Alembic for database migrations in backend/alembic/ (alembic init)
